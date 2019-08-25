@@ -1,0 +1,80 @@
+Reproducible Research Project 1
+=========================================
+
+# Author: Michael Cui
+
+## 1. Loading the dataset
+```{r loaddataset}
+setwd("~/Downloads")
+data <- read.csv("activity.csv")
+```
+
+## 2. Histogram of the total number of steps taken each day
+```{r totalsteps}
+library(ggplot2)
+dailysum <- tapply(data$steps, data$date, sum, na.rm = TRUE)
+qplot(dailysum, xlab = "total number of steps taken each day")
+```
+
+## 3. Mean and median number of steps taken each day
+```{r summary}
+summary(dailysum)
+```
+
+## 4. Time series plot of the average number of steps taken
+```{r stepsbytime}
+library(ggplot2)
+averagesteps <- aggregate(x=list(steps=data$steps), by=list(interval=data$interval)                               ,FUN=mean, na.rm=TRUE)
+ggplot(data = averagesteps, aes(x = interval, y = steps)) + 
+                            geom_line() +
+                            ylab("steps") +
+                            xlab("interval")
+```
+
+## 5. The 5-minute interval that, on average, contains the maximum number of steps
+```{r maxinterval}
+maxvalue <- which.max(averagesteps$steps)
+averagesteps[maxvalue, ]
+```
+
+## 6. Code to describe and show a strategy for imputing missing data
+```{r nadescription}
+nas <- is.na(data$steps)
+sum(nas) ## total count of NAs
+mean(nas) ## percentage of NAs
+```
+We can see that there is a significant amount of NAs. This might influence the results. To mitigate this effect, we need to input missing data. 
+First, find out where the missing values are. 
+```{r nasummary}
+missing <- data[nas, ]
+## observe the data
+summary(missing)
+unique(missing$date)
+```
+We can see that missing values are located in 8 different days, each with 288 missing values. There is a total of 2304 missing values.
+Now we fill each NA with the mean number of steps in that specific interval.
+```{r fillna}
+library(dplyr)
+averagesteps2 <- as.list(averagesteps$steps)
+missing$steps <- rep(averagesteps2, 8)
+fulldata <- data[!nas, ]
+inputeddata <- rbind(fulldata, missing)
+inputeddata <- arrange(inputeddata, date)
+inputeddata <- as.data.frame(inputeddata)
+```
+## 7. Histogram of the total number of steps taken each day after missing values are imputed
+```{r totalsteps2}
+library(ggplot2)
+inputeddata$steps <- as.numeric(inputeddata$steps)
+dailysum2 <- tapply(inputeddata$steps, inputeddata$date, sum, na.rm = TRUE)
+qplot(dailysum2, xlab = "total number of steps taken each day")
+```
+## 8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r weekdayplot}
+library(lubridate)
+inputeddata$date <- as.POSIXct(inputeddata$date)
+inputeddata_weekday <- mutate(inputeddata, weekday=weekdays(date))
+dailysum2_weekday_interval <- group_by(inputeddata_weekday, weekday, interval)
+results <- summarise(dailysum2_weekday_interval, steps=mean(steps, na.rm=TRUE))
+qplot(interval, steps, data=results, facets= weekday ~ .) + geom_line()
+```
