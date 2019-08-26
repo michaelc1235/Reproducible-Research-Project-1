@@ -1,2 +1,2 @@
 # Reproducible-Research-Project-1
-For Johns Hopkins' Reproducible Research Course
+# PLEASE SEE PLOTS IN THE HTML FILE!!
